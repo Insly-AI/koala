@@ -67,6 +67,7 @@ IND_FUN = [
     "GAMMALN",  # see lgamma, a Python function, redefined in function map above
     "IF",  # see astnodes.py, not defined here
     "IFERROR",
+    "IFS",
     "INDEX",  # see astnodes.py
     "IRR",
     "ISBLANK",
@@ -78,6 +79,7 @@ IND_FUN = [
     "LN",  # see xlog, redefined in function map above
     "MATCH",
     "MAX",  # see xmax, redefined in function map above
+    "MAXIFS",
     "MID",
     "MIN",  # see xmin, redefined in function map above
     "MOD",
@@ -96,6 +98,7 @@ IND_FUN = [
     "ROWS",
     "SLN",
     "SQRT",
+    "SWITCH",
     "SUM",  # see xsum, redefined in function map above
     "SUMIF",
     "SUMIFS",
@@ -105,6 +108,7 @@ IND_FUN = [
     "VALUE",
     "VDB",
     "VLOOKUP",
+    "XLOOKUP",
     "XIRR",
     "XLOG",
     "XNPV",
@@ -1016,6 +1020,97 @@ def vlookup(lookup_value, table_array, col_index_num, range_lookup = True): # ht
             return ExcelError('#N/A', 'lookup_value smaller than all values of table_array')
 
     return Range.find_associated_value(ref, result_column)
+
+
+def ifs(*args):  # Excel reference: https://support.microsoft.com/en-us/office/ifs-function-36329a26-37b2-467c-972b-4a39bd951d45
+    """Evaluates conditions in order, returns the value for the first TRUE condition.
+    IFS(condition1, value1, condition2, value2, ...)
+    """
+    for i in range(0, len(args) - 1, 2):
+        condition = args[i]
+        value = args[i + 1]
+        # Handle Range objects (single-cell ranges)
+        if isinstance(condition, Range):
+            condition = condition.value
+            if hasattr(condition, '__iter__'):
+                condition = condition[0][0] if hasattr(condition[0], '__iter__') else condition[0]
+        if condition:
+            return value
+    return ExcelError('#N/A', 'No TRUE condition in IFS')
+
+
+def xlookup(lookup_value, lookup_array, return_array, if_not_found=None, match_mode=0, search_mode=1):  # Excel reference: https://support.microsoft.com/en-us/office/xlookup-function-b7fd680e-6d10-43e6-84f9-88eae8bf5929
+    """Searches a range and returns a matching item from a corresponding range.
+    Supports exact match (match_mode=0, default). Other match modes not yet implemented.
+    """
+    # Extract values from Range objects
+    if isinstance(lookup_array, Range):
+        lookup_vals = list(lookup_array.value)
+        if lookup_vals and hasattr(lookup_vals[0], '__iter__'):
+            lookup_vals = [row[0] for row in lookup_vals]
+    else:
+        lookup_vals = [lookup_array]
+
+    if isinstance(return_array, Range):
+        return_vals = list(return_array.value)
+        if return_vals and hasattr(return_vals[0], '__iter__'):
+            return_vals = [row[0] for row in return_vals]
+    else:
+        return_vals = [return_array]
+
+    for i, val in enumerate(lookup_vals):
+        if val == lookup_value:
+            if i < len(return_vals):
+                return return_vals[i]
+
+    if if_not_found is not None:
+        return if_not_found
+    return ExcelError('#N/A', 'XLOOKUP: no match found for %s' % str(lookup_value))
+
+
+def switch(expression, *args):  # Excel reference: https://support.microsoft.com/en-us/office/switch-function-47ab33c0-28ce-4530-8a45-d532ec4aa25e
+    """Evaluates expression against a list of values, returns result for first match.
+    SWITCH(expression, value1, result1, value2, result2, ..., [default])
+    """
+    for i in range(0, len(args) - 1, 2):
+        if expression == args[i]:
+            return args[i + 1]
+    if len(args) % 2 == 1:
+        return args[-1]
+    return ExcelError('#N/A', 'No match in SWITCH')
+
+
+def maxifs(max_range, *args):  # Excel reference: https://support.microsoft.com/en-us/office/maxifs-function-dfd611e6-da2c-488a-919b-9b6376b28883
+    """Returns the maximum value among cells specified by a given set of conditions.
+    MAXIFS(max_range, criteria_range1, criteria1, ...)
+    """
+    if isinstance(max_range, Range):
+        max_vals = list(max_range.value)
+        if max_vals and hasattr(max_vals[0], '__iter__'):
+            max_vals = [row[0] for row in max_vals]
+    else:
+        return max_range
+
+    mask = [True] * len(max_vals)
+    for i in range(0, len(args) - 1, 2):
+        crit_range = args[i]
+        criteria = args[i + 1]
+
+        if isinstance(crit_range, Range):
+            crit_vals = list(crit_range.value)
+            if crit_vals and hasattr(crit_vals[0], '__iter__'):
+                crit_vals = [row[0] for row in crit_vals]
+        else:
+            crit_vals = [crit_range]
+
+        for j in range(min(len(mask), len(crit_vals))):
+            if mask[j] and crit_vals[j] != criteria:
+                mask[j] = False
+
+    filtered = [v for v, m in zip(max_vals, mask) if m and isinstance(v, (int, float))]
+    if not filtered:
+        return 0
+    return max(filtered)
 
 
 def xirr(values, dates, guess=0):

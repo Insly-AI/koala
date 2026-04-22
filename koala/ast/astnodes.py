@@ -302,6 +302,12 @@ class FunctionNode(ASTNode):
     def emit(self,ast,context=None, pointer = False):
         fun = self.tvalue.lower()
 
+        # Strip _xlfn. prefix from modern Excel function names (IFS, XLOOKUP, etc.)
+        # Excel prefixes newer functions with _xlfn. internally; we resolve them
+        # to their standard names so they can be looked up in excellib.py.
+        if fun.startswith('_xlfn.'):
+            fun = fun[len('_xlfn.'):]
+
         # Try to get the arguments
         args = self.children(ast)
 
