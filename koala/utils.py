@@ -170,11 +170,17 @@ def resolve_range(rng, should_flatten = False, sheet=''):
             end_col = "XFD"
             end_row = end
         elif start.isalpha() and end.isalpha():
-            # This copes with A:A style ranges
+            # This copes with A:A style ranges.
+            # Cap at 1000 rows instead of 2**20 (1,048,576). Full-column
+            # references in Excel mean "use whatever data exists in this
+            # column", not "create a million cells". Rating engine
+            # spreadsheets have at most a few hundred rows of rate data;
+            # 1000 provides ample headroom without creating a million-node
+            # formula graph that takes minutes to evaluate.
             start_col = start
             start_row = 1
             end_col = end
-            end_row = 2**20
+            end_row = 1000
         else:
             sh, start_col, start_row = split_address(start)
             sh, end_col, end_row = split_address(end)
