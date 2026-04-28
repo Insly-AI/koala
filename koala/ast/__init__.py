@@ -474,7 +474,7 @@ def graph_from_seeds(seeds, cell_source):
         # set the code & compile it (will flag problems sooner rather than later)
         c1.python_expression = pystr.replace('"', "'") # compilation is done later
 
-        if 'OFFSET' in c1.formula or 'INDEX' in c1.formula:
+        if isinstance(c1.formula, str) and ('OFFSET' in c1.formula or 'INDEX' in c1.formula):
             if c1.address() not in cell_source.named_ranges: # pointers names already treated in ExcelCompiler
                 cell_source.pointers.add(c1.address())
 
@@ -526,7 +526,7 @@ def graph_from_seeds(seeds, cell_source):
                 else:
                     reference = dep_name
 
-                if 'OFFSET' in reference or 'INDEX' in reference:
+                if isinstance(reference, str) and ('OFFSET' in reference or 'INDEX' in reference):
                     start_end = prepare_pointer(reference, names, ref_cell = c1)
                     rng = cell_source.range(start_end)
 

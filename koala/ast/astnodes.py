@@ -323,7 +323,7 @@ class FunctionNode(ASTNode):
             childs = args[0].children(ast)
 
             for child in childs:
-                if ':' in child.tvalue and child.tvalue != ':':
+                if isinstance(child.tvalue, str) and ':' in child.tvalue and child.tvalue != ':':
                     is_range = True
                     range = child.tvalue
                     break

@@ -38,6 +38,8 @@ def is_almost_equal(a, b, precision = 0.0001):
 def is_range(address):
     if isinstance(address, Exception):
         return address
+    if not isinstance(address, str):
+        return False
     return address.find(':') > 0
 
 
